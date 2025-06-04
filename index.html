@@ -3,12 +3,25 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Visor GeoJSON</title>
+  <title>Visor GeoJSON con Ubicación</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; font-family: Arial; }
+    #map { height: calc(100% - 60px); }
+    #controls {
+      padding: 10px;
+      background: #f0f0f0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    #controls input, #controls button {
+      font-size: 14px;
+      padding: 5px;
+    }
+  </style>
 </head>
 <body>
   <div id="controls">
@@ -16,8 +29,8 @@
     <input type="number" id="lat" placeholder="Lat" step="any" />
     <input type="number" id="lng" placeholder="Lng" step="any" />
     <button id="check-btn">Verificar ubicación</button>
-    <button id="download-btn">Descargar GeoJSON actualizado</button>
-    <span id="user-mode"></span>
+    <button id="locate-btn">📍 Usar mi ubicación</button>
+    <span id="user-mode" style="margin-left:auto;"></span>
   </div>
   <div id="map"></div>
 
