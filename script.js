@@ -62,14 +62,47 @@ function cargarPoligonosDesdeGeoJSON() {
 
 function verificarUbicacion(latlng) {
   const pt = turf.point([latlng.lng, latlng.lat]);
-  let nombrePoligono = null;
+  let dentro = false;
   drawnItems.eachLayer(layer => {
     const poly = layer.toGeoJSON();
     if (turf.booleanPointInPolygon(pt, poly)) {
-      nombrePoligono = layer.feature?.properties?.nombre || 'Sin nombre';
+      dentro = true;
     }
   });
-  return nombrePoligono;
+  return dentro;
+}
+
+document.getElementById('check-btn').addEventListener('click', async () => {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  const dir = document.getElementById('address').value.trim();
+
+  let latlng;
+  if (!isNaN(lat) && !isNaN(lng)) {
+    latlng = { lat, lng };
+  } else if (dir) {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dir)}&limit=1`);
+    const data = await res.json();
+    if (data && data.length > 0) {
+      latlng = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  }
+
+  if (!latlng) {
+    alert('No se pudo obtener una ubicación.');
+    return;
+  }
+
+  if (lastMarker) map.removeLayer(lastMarker);
+  lastMarker = L.marker([latlng.lat, latlng.lng]).addTo(map).bindPopup('Ubicación').openPopup();
+  map.setView([latlng.lat, latlng.lng], 16);
+
+  const dentro = verificarUbicacion(latlng);
+  if (dentro) {
+    alert('❌ No es posible crear un nuevo suministro en esta dirección.');
+  } else {
+    alert('✅ Es posible crear un nuevo suministro en esta dirección.');
+  }
 });
 
 document.getElementById('download-btn').addEventListener('click', () => {
