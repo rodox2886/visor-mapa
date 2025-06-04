@@ -21,9 +21,9 @@ function bindPolygonLabel(layer, name) {
   });
 }
 
-function restaurarPoligonosGuardados() {
-  fetch("poligonos.geojson")
-    .then(res => res.json())
+function cargarPoligonosDesdeGeoJSON() {
+  fetch('poligonos.geojson')
+    .then(response => response.json())
     .then(geojson => {
       geojson.features.forEach(feature => {
         const nombre = feature.properties.nombre || 'Sin nombre';
@@ -56,7 +56,8 @@ function restaurarPoligonosGuardados() {
       if (drawnItems.getLayers().length > 0) {
         map.fitBounds(drawnItems.getBounds());
       }
-    });
+    })
+    .catch(err => console.error('Error al cargar el GeoJSON:', err));
 }
 
 function verificarUbicacion(latlng) {
@@ -104,20 +105,15 @@ document.getElementById('check-btn').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('locate-btn').addEventListener('click', () => {
-  if (!navigator.geolocation) {
-    alert("La geolocalización no es compatible con este navegador.");
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    document.getElementById('lat').value = lat;
-    document.getElementById('lng').value = lng;
-    document.getElementById('check-btn').click();
-  }, () => {
-    alert("No se pudo obtener la ubicación.");
-  });
+document.getElementById('download-btn').addEventListener('click', () => {
+  const geojson = drawnItems.toGeoJSON();
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nuevo_poligonos.geojson';
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
 window.addEventListener('load', () => {
@@ -159,8 +155,9 @@ window.addEventListener('load', () => {
       drawnItems.addLayer(layer);
     });
   } else {
+    document.getElementById('download-btn').style.display = 'none';
     document.getElementById('user-mode').textContent = '👀 Modo Consulta';
   }
 
-  restaurarPoligonosGuardados();
+  cargarPoligonosDesdeGeoJSON();
 });
