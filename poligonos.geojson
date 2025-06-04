@@ -1,4 +1,39 @@
 {
   "type": "FeatureCollection",
-  "features": []
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Área44",
+        "color": "#6576f5"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -58.480482,
+              -34.578358
+            ],
+            [
+              -58.469954,
+              -34.571436
+            ],
+            [
+              -58.470755,
+              -34.591352
+            ],
+            [
+              -58.4834,
+              -34.587633
+            ],
+            [
+              -58.480482,
+              -34.578358
+            ]
+          ]
+        ]
+      }
+    }
+  ]
 }
