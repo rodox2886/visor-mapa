@@ -99,9 +99,9 @@ document.getElementById('check-btn').addEventListener('click', async () => {
 
   const dentro = verificarUbicacion(latlng);
   if (dentro) {
-    alert('❌ No es posible crear un nuevo suministro en esta dirección.');
+    alert('❌ La dirección indicada se encuentra dentro de un poligono.');
   } else {
-    alert('✅ Es posible crear un nuevo suministro en esta dirección.');
+    alert('✅ La dirección indicada no se encuentra dentro de un poligono.');
   }
 });
 
