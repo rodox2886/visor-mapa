@@ -57,4 +57,4 @@ Este visor permite visualizar un mapa con zonas delimitadas por polígonos y ver
 
 ## 🛠 Autor
 
-Desarrollado por Rodolfo Raúl Flores
+Desarrollado por Procesos Tecnicos
