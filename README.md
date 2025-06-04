@@ -46,4 +46,4 @@ Este visor permite visualizar un mapa con zonas delimitadas por polígonos y ver
 
 ## 🛠 Autor
 
-Proyecto desarrollado por Rodolfo Raúl Flores.
+Proyecto desarrollado por Rodolfo.
