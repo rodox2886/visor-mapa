@@ -12,11 +12,9 @@
 </head>
 <body>
   <div id="controls">
-    <input type="text" id="address" placeholder="Dirección" />
-    <input type="number" id="lat" placeholder="Lat" step="any" />
-    <input type="number" id="lng" placeholder="Lng" step="any" />
-    <button id="check-btn">Verificar ubicación</button>
     <button id="download-btn">Descargar GeoJSON actualizado</button>
+<button id="export-summary-btn">Descargar resumen por polígono</button>
+<div style="margin-top:10px;"><label><input type="checkbox" id="toggle-clientes" checked> Ver Clientes</label></div>
     <span id="user-mode"></span>
   </div>
   <div id="map"></div>

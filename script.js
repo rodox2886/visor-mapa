@@ -1,163 +1,168 @@
 
-let esAdmin = false;
+const map = L.map('map').setView([-34.6, -58.45], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let poligonosLayer = new L.FeatureGroup().addTo(map);
+let clientePoints = [];
+let clientesLayer = L.layerGroup().addTo(map);
 let drawControl;
-const map = L.map('map').setView([-34.6, -58.4], 12);
-const drawnItems = new L.FeatureGroup().addTo(map);
+let esAdmin = false;
+
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+function contarClientesEnPoligono(geojsonPoly) {
+  let count = 0;
+  clientePoints.forEach(c => {
+    const pt = turf.point([c.LONGITUD, c.LATITUD]);
+    if (turf.booleanPointInPolygon(pt, geojsonPoly)) {
+      count++;
+    }
+  });
+  return count;
+}
+
 let lastMarker = null;
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap'
-}).addTo(map);
-
-function colorAleatorio() {
-  return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-}
-
-function bindPolygonLabel(layer, name) {
-  layer.bindTooltip(`<b>${name}</b>`, {
-    permanent: true,
-    direction: 'center'
-  });
-}
-
-function cargarPoligonosDesdeGeoJSON() {
-  fetch('poligonos.geojson')
-    .then(response => response.json())
-    .then(geojson => {
-      geojson.features.forEach(feature => {
-        const nombre = feature.properties.nombre || 'Sin nombre';
-        const color = feature.properties.color || colorAleatorio();
-        const coords = feature.geometry.coordinates[0].map(p => [p[1], p[0]]);
-        const layer = L.polygon(coords, {
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.4,
-          weight: 2
-        });
-        layer.feature = {
-          type: 'Feature',
-          properties: { nombre, color },
-          geometry: feature.geometry
-        };
-        bindPolygonLabel(layer, nombre);
-        if (esAdmin) {
-          layer.on('dblclick', function(e) {
-            e.originalEvent.preventDefault();
-            const nuevo = prompt('Nuevo nombre:', nombre);
-            if (nuevo) {
-              layer.feature.properties.nombre = nuevo;
-              bindPolygonLabel(layer, nuevo);
-            }
-          });
-        }
-        drawnItems.addLayer(layer);
-      });
-      if (drawnItems.getLayers().length > 0) {
-        map.fitBounds(drawnItems.getBounds());
-      }
-    })
-    .catch(err => console.error('Error al cargar el GeoJSON:', err));
-}
-
-function verificarUbicacion(latlng) {
-  const pt = turf.point([latlng.lng, latlng.lat]);
-  let dentro = false;
-  drawnItems.eachLayer(layer => {
-    const poly = layer.toGeoJSON();
-    if (turf.booleanPointInPolygon(pt, poly)) {
-      dentro = true;
-    }
-  });
-  return dentro;
-}
-
-document.getElementById('check-btn').addEventListener('click', async () => {
-  const lat = parseFloat(document.getElementById('lat').value);
-  const lng = parseFloat(document.getElementById('lng').value);
-  const dir = document.getElementById('address').value.trim();
-
-  let latlng;
-  if (!isNaN(lat) && !isNaN(lng)) {
-    latlng = { lat, lng };
-  } else if (dir) {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dir)}&limit=1`);
-    const data = await res.json();
-    if (data && data.length > 0) {
-      latlng = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
-  }
-
-  if (!latlng) {
-    alert('No se pudo obtener una ubicación.');
-    return;
-  }
-
-  if (lastMarker) map.removeLayer(lastMarker);
-  lastMarker = L.marker([latlng.lat, latlng.lng]).addTo(map).bindPopup('Ubicación').openPopup();
-  map.setView([latlng.lat, latlng.lng], 16);
-
-  const dentro = verificarUbicacion(latlng);
-  if (dentro) {
-    alert('❌ La dirección indicada se encuentra dentro de un poligono.');
-  } else {
-    alert('✅ La dirección indicada no se encuentra dentro de un poligono.');
-  }
-});
 
 document.getElementById('download-btn').addEventListener('click', () => {
-  const geojson = drawnItems.toGeoJSON();
+  const geojson = poligonosLayer.toGeoJSON();
   const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'nuevo_poligonos.geojson';
+  a.download = 'poligonos_actualizados.geojson';
   a.click();
   URL.revokeObjectURL(url);
 });
 
-window.addEventListener('load', () => {
-  const clave = prompt('Contraseña para edición (dejar vacío para consulta):');
-  if (clave === 'admin2025') {
-    esAdmin = true;
-    document.getElementById('user-mode').textContent = '🛠️ Modo Administrador';
-    drawControl = new L.Control.Draw({
-      draw: {
-        polygon: true,
-        polyline: false,
-        circle: false,
-        rectangle: false,
-        marker: false,
-        circlemarker: false
-      },
-      edit: {
-        featureGroup: drawnItems,
-        remove: true
-      }
-    });
-    map.addControl(drawControl);
+function iniciarModoAdmin() {
+  esAdmin = true;
+  document.getElementById('user-mode').textContent = '🛠️ Modo Administrador';
 
-    map.on(L.Draw.Event.CREATED, function (e) {
-      const layer = e.layer;
-      const color = colorAleatorio();
-      layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.4 });
-      const nombre = prompt('Nombre del polí­gono:', 'Área');
-      layer.feature = { type: 'Feature', properties: { nombre, color } };
-      bindPolygonLabel(layer, nombre);
-      layer.on('dblclick', function(e) {
-        e.originalEvent.preventDefault();
-        const nuevo = prompt('Nuevo nombre:', nombre);
-        if (nuevo) {
-          layer.feature.properties.nombre = nuevo;
-          bindPolygonLabel(layer, nuevo);
+  drawControl = new L.Control.Draw({
+    draw: {
+      polygon: {
+        shapeOptions: {
+          color: getRandomColor(),
+          fillOpacity: 0.3
         }
-      });
-      drawnItems.addLayer(layer);
+      },
+      polyline: false,
+      rectangle: false,
+      circle: false,
+      marker: false,
+      circlemarker: false
+    },
+    edit: {
+      featureGroup: poligonosLayer,
+      remove: true
+    }
+  });
+  map.addControl(drawControl);
+
+  map.on(L.Draw.Event.CREATED, function (e) {
+    const layer = e.layer;
+    const color = getRandomColor();
+    const nombre = prompt('Nombre del área:', 'Área') || 'Área';
+    layer.setStyle({ color, fillColor: color, fillOpacity: 0.3 });
+    layer.feature = {
+      type: 'Feature',
+      properties: { nombre }
+    };
+    poligonosLayer.addLayer(layer);
+    layer.bindTooltip(nombre, { permanent: true, direction: 'center' });
+    layer.on('click', function (e) {
+      const cantidad = contarClientesEnPoligono(layer.toGeoJSON());
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`<b>${nombre}</b><br>Clientes dentro: ${cantidad}`)
+        .openOn(map);
     });
+  });
+}
+
+window.onload = () => {
+  const clave = prompt('Contraseña para edición (dejar vacío para solo consulta):');
+  if (clave === 'admin2025') {
+    iniciarModoAdmin();
   } else {
-    document.getElementById('download-btn').style.display = 'none';
     document.getElementById('user-mode').textContent = '👀 Modo Consulta';
   }
 
-  cargarPoligonosDesdeGeoJSON();
+  fetch('clientes.json')
+    .then(res => res.json())
+    .then(clientes => {
+      clientePoints = clientes;
+      clientes.forEach(c => {
+        const marker = L.circleMarker([c.LATITUD, c.LONGITUD], {
+          radius: 5,
+          fillColor: "#007bff",
+          color: "#007bff",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+    clientesLayer.addLayer(marker);
+        marker.bindPopup(`<b>${c.RAZON_SOCIAL}</b><br>${c.LOCALIDAD}`);
+      });
+
+      fetch('poligonos.geojson')
+        .then(res => res.json())
+        .then(data => {
+          L.geoJSON(data, {
+            style: () => {
+              const c = getRandomColor();
+              return { color: c, fillColor: c, fillOpacity: 0.3 };
+            },
+            onEachFeature: (feature, layer) => {
+              const nombre = feature.properties?.nombre || 'Área';
+              layer.bindTooltip(nombre, { permanent: true, direction: 'center' });
+              layer.on('click', function (e) {
+                const cantidad = contarClientesEnPoligono(layer.toGeoJSON());
+                L.popup()
+                  .setLatLng(e.latlng)
+                  .setContent(`<b>${nombre}</b><br>Clientes dentro: ${cantidad}`)
+                  .openOn(map);
+              });
+              poligonosLayer.addLayer(layer);
+            }
+          });
+        });
+    });
+};
+
+
+
+document.getElementById('export-summary-btn').addEventListener('click', () => {
+  const resumen = [];
+  poligonosLayer.eachLayer(layer => {
+    const geojson = layer.toGeoJSON();
+    const nombre = layer.feature?.properties?.nombre || 'Área';
+    const cantidad = contarClientesEnPoligono(geojson);
+    resumen.push({ nombre, cantidad });
+  });
+
+  const contenido = "Polígono,Cantidad de Clientes\n" + resumen.map(r => `${r.nombre},${r.cantidad}`).join("\n");
+  const blob = new Blob([contenido], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'resumen_poligonos.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('toggle-clientes').addEventListener('change', function () {
+  if (this.checked) {
+    map.addLayer(clientesLayer);
+  } else {
+    map.removeLayer(clientesLayer);
+  }
 });
