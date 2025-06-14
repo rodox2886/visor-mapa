@@ -3,77 +3,44 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Detector de Luminarias</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.2.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    canvas { max-width: 90%; }
-    #output { margin-top: 20px; }
-  </style>
+  <title>Visor GeoJSON</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Detector de Luminarias</h1>
-  <input type="file" accept="image/*" onchange="handleImage(event)">
-  <br><br>
-  <canvas id="canvas"></canvas>
-  <div id="output"></div>
+  <div id="controls">
 
-  <script>
-    let model;
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+<select id="modo-verificacion" style="padding: 6px; border-radius: 5px;">
+  <option value="direccion" selected>Verificar por dirección</option>
+  <option value="coordenadas">Verificar por coordenadas</option>
+</select>
 
-    async function loadModel() {
-      model = await tf.loadGraphModel('model/model.json');
-      console.log("Modelo cargado");
-    }
+<div id="grupo-direccion">
+    <input type="text" id="address" placeholder="Dirección" />
+    <input type="number" id="lat" placeholder="Lat" step="any" />
+    <input type="number" id="lng" placeholder="Lng" step="any" />
+    <button id="check-btn">Verificar ubicación</button>
+    <button id="download-btn">Descargar GeoJSON actualizado</button>
+    <span id="user-mode"></span>
+  </div>
+  <div id="map"></div>
 
-    async function handleImage(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
+  <script src="script.js"></script>
 
-      const img = new Image();
-      img.onload = async () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
+<script>
+document.getElementById("modo-verificacion").addEventListener("change", function() {
+  const modo = this.value;
+  document.getElementById("grupo-direccion").style.display = modo === "direccion" ? "block" : "none";
+  document.getElementById("grupo-coordenadas").style.display = modo === "coordenadas" ? "block" : "none";
+});
+</script>
 
-        const input = tf.browser.fromPixels(canvas).resizeBilinear([416, 416]).expandDims(0).toFloat().div(255);
-        const predictions = await model.executeAsync(input);
-
-        const boxes = predictions[1].arraySync()[0];
-        const scores = predictions[4].arraySync()[0];
-        const classes = predictions[2].arraySync()[0];
-
-        let count = {};
-
-        for (let i = 0; i < scores.length; i++) {
-          if (scores[i] > 0.5) {
-            const [ymin, xmin, ymax, xmax] = boxes[i];
-            const x = xmin * img.width;
-            const y = ymin * img.height;
-            const width = (xmax - xmin) * img.width;
-            const height = (ymax - ymin) * img.height;
-
-            const label = classes[i];
-            count[label] = (count[label] || 0) + 1;
-
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
-            ctx.fillStyle = 'red';
-            ctx.fillText(label, x, y > 10 ? y - 5 : y + 15);
-          }
-        }
-
-        document.getElementById("output").innerText = "Conteo por tipo: " + JSON.stringify(count);
-      };
-
-      img.src = URL.createObjectURL(file);
-    }
-
-    loadModel();
-  </script>
 </body>
 </html>
